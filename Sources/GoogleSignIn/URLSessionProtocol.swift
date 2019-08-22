@@ -6,3 +6,5 @@ public protocol URLSessionProtocol {
         completionHandler: @escaping (Data?, URLResponse?, Swift.Error?) -> Void
     ) -> URLSessionDataTask
 }
+
+extension URLSession: URLSessionProtocol {}
