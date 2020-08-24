@@ -5,12 +5,12 @@ final class ControllerTests: XCTestCase {
 
     static var allTests = [
         ("testSingInPageURLShouldBeCorrect", testSingInPageURLShouldBeCorrect),
-        ("testGetAccessTokenFromInvalidRedirectURLShouldFail", testGetAccessTokenFromInvalidRedirectURLShouldFail),
-        ("testGetAccessTokenShouldCreateCorrectRequest", testGetAccessTokenShouldCreateCorrectRequest),
-        ("testGetAccessTokenShouldFailOnNetworkError", testGetAccessTokenShouldFailOnNetworkError),
-        ("testGetAccessTokenShouldFailWhenNoDataIsReceived", testGetAccessTokenShouldFailWhenNoDataIsReceived),
-        ("testGetAccessTokenShouldFailWhenInvalidDataIsReceived", testGetAccessTokenShouldFailWhenInvalidDataIsReceived),
-        ("testGetAccessTokenShouldCompleteWithDecodedToken", testGetAccessTokenShouldCompleteWithDecodedToken)
+        ("testGetTokenResponseFromInvalidRedirectURLShouldFail", testGetTokenResponseFromInvalidRedirectURLShouldFail),
+        ("testGetTokenResponseShouldCreateCorrectRequest", testGetTokenResponseShouldCreateCorrectRequest),
+        ("testGetTokenResponseShouldFailOnNetworkError", testGetTokenResponseShouldFailOnNetworkError),
+        ("testGetTokenResponseShouldFailWhenNoDataIsReceived", testGetTokenResponseShouldFailWhenNoDataIsReceived),
+        ("testGetTokenResponseShouldFailWhenInvalidDataIsReceived", testGetTokenResponseShouldFailWhenInvalidDataIsReceived),
+        ("testGetTokenResponseShouldCompleteWithDecodedToken", testGetTokenResponseShouldCompleteWithDecodedToken)
     ]
 
     var sut: Controller!
@@ -46,12 +46,12 @@ final class ControllerTests: XCTestCase {
         XCTAssertEqual(components?.queryItems?.first(where: { $0.name == "redirect_uri" })?.value, config.redirectUri)
     }
 
-    func testGetAccessTokenFromInvalidRedirectURLShouldFail() {
+    func testGetTokenResponseFromInvalidRedirectURLShouldFail() {
         let redirectURL = URL(string: "https://localhost/no_code")!
         let completionCalled = XCTestExpectation(description: "Completion block called")
-        sut.getAccessToken(using: redirectURL) { result in
+        sut.getTokenResponse(using: redirectURL) { result in
             if case .failure(.codeNotFoundInRedirectURL) = result {} else {
-                let expectedResult = Result<Token, Error>.failure(.codeNotFoundInRedirectURL)
+                let expectedResult = Result<TokenResponse, Error>.failure(.codeNotFoundInRedirectURL)
                 XCTFail("Invalid result, expected <\(expectedResult)>, got <\(result)>")
             }
             completionCalled.fulfill()
@@ -60,10 +60,10 @@ final class ControllerTests: XCTestCase {
         XCTAssertNil(session.didCreateDataTaskWithRequest)
     }
 
-    func testGetAccessTokenShouldCreateCorrectRequest() {
+    func testGetTokenResponseShouldCreateCorrectRequest() {
         let code = "CODE-1234"
         let redirectURL = URL(string: "\(config.redirectUri)?code=\(code)&OTHER=1")!
-        sut.getAccessToken(using: redirectURL) { _ in }
+        sut.getTokenResponse(using: redirectURL) { _ in }
 
         let createdRequest = session.didCreateDataTaskWithRequest
         XCTAssertEqual(createdRequest?.httpMethod, "POST")
@@ -96,16 +96,16 @@ final class ControllerTests: XCTestCase {
         XCTAssertEqual(session.createdDataTask?.didResume, true)
     }
 
-    func testGetAccessTokenShouldFailOnNetworkError() {
+    func testGetTokenResponseShouldFailOnNetworkError() {
         let code = "CODE-1234"
         let redirectURL = URL(string: "\(config.redirectUri)?code=\(code)&OTHER=1")!
         let networkError = NSError(domain: "some error", code: 357, userInfo: nil)
         let completionCalled = XCTestExpectation(description: "Completion block called")
-        sut.getAccessToken(using: redirectURL) { result in
+        sut.getTokenResponse(using: redirectURL) { result in
             if case let .failure(.networkError(error)) = result {
                 XCTAssert((error as NSError) === networkError)
             } else {
-                let expectedResult = Result<Token, Error>.failure(.networkError(networkError))
+                let expectedResult = Result<TokenResponse, Error>.failure(.networkError(networkError))
                 XCTFail("Invalid result, expected <\(expectedResult)>, got <\(result)>")
             }
             completionCalled.fulfill()
@@ -114,13 +114,13 @@ final class ControllerTests: XCTestCase {
         wait(for: [completionCalled], timeout: 1)
     }
 
-    func testGetAccessTokenShouldFailWhenNoDataIsReceived() {
+    func testGetTokenResponseShouldFailWhenNoDataIsReceived() {
         let code = "CODE-1234"
         let redirectURL = URL(string: "\(config.redirectUri)?code=\(code)&OTHER=1")!
         let completionCalled = XCTestExpectation(description: "Completion block called")
-        sut.getAccessToken(using: redirectURL) { result in
+        sut.getTokenResponse(using: redirectURL) { result in
             if case .failure(.invalidResponse) = result {} else {
-                let expectedResult = Result<Token, Error>.failure(.invalidResponse)
+                let expectedResult = Result<TokenResponse, Error>.failure(.invalidResponse)
                 XCTFail("Invalid result, expected <\(expectedResult)>, got <\(result)>")
             }
             completionCalled.fulfill()
@@ -129,11 +129,11 @@ final class ControllerTests: XCTestCase {
         wait(for: [completionCalled], timeout: 1)
     }
 
-    func testGetAccessTokenShouldFailWhenInvalidDataIsReceived() {
+    func testGetTokenResponseShouldFailWhenInvalidDataIsReceived() {
         let code = "CODE-1234"
         let redirectURL = URL(string: "\(config.redirectUri)?code=\(code)&OTHER=1")!
         let completionCalled = XCTestExpectation(description: "Completion block called")
-        sut.getAccessToken(using: redirectURL) { result in
+        sut.getTokenResponse(using: redirectURL) { result in
             if case .failure(.tokenDecodingError(_)) = result {} else {
                 XCTFail("Invalid result, expected <failure(GoogleSignIn.Error.tokenDecodingError(...)>, got <\(result)>")
             }
@@ -143,16 +143,23 @@ final class ControllerTests: XCTestCase {
         wait(for: [completionCalled], timeout: 1)
     }
 
-    func testGetAccessTokenShouldCompleteWithDecodedToken() {
+    func testGetTokenResponseShouldCompleteWithDecodedToken() {
         let code = "CODE-1234"
         let redirectURL = URL(string: "\(config.redirectUri)?code=\(code)&OTHER=1")!
-        let token = Token(accessToken: "ACCESS-TOKEN-4321")
+        let token = TokenResponse(
+            accessToken: "ACCESS-TOKEN-4321",
+            expiresIn: 0,
+            idToken: "",
+            scope: "",
+            tokenType: "",
+            refreshToken: nil
+        )
         let completionCalled = XCTestExpectation(description: "Completion block called")
-        sut.getAccessToken(using: redirectURL) { result in
+        sut.getTokenResponse(using: redirectURL) { result in
             if case let .success(resultToken) = result {
                 XCTAssertEqual(resultToken, token)
             } else {
-                let expectedResult = Result<Token, Error>.success(token)
+                let expectedResult = Result<TokenResponse, Error>.success(token)
                 XCTFail("Invalid result, expected <\(expectedResult)>, got <\(result)>")
             }
             completionCalled.fulfill()

@@ -21,7 +21,7 @@ public class Controller {
         return components.url!
     }
 
-    public func getAccessToken(using redirectUrl: URL, completion: @escaping (Result<Token, Error>) -> Void) {
+    public func getTokenResponse(using redirectUrl: URL, completion: @escaping (Result<TokenResponse, Error>) -> Void) {
         guard let code = self.code(from: redirectUrl) else {
             completion(.failure(.codeNotFoundInRedirectURL))
             return
@@ -81,10 +81,10 @@ public class Controller {
         return components.url!
     }
 
-    private func decodeToken(from data: Data) throws -> Token {
+    private func decodeToken(from data: Data) throws -> TokenResponse {
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
-        return try decoder.decode(Token.self, from: data)
+        return try decoder.decode(TokenResponse.self, from: data)
     }
 
 }

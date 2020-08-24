@@ -72,15 +72,15 @@ GoogleSignIn-Swift is compatible with [Swift Package Manager](https://swift.org/
   
     Replace `REDIRECT_URI_SCHEME` with your `CLIENT_ID` using reverse domain notation. For example: `com.googleusercontent.apps.1234-abcd`.
   
-5. Handle redirection after user signs in to obtain oAuth Access Token by calling `getAccessToken` function on `GoogleSignIn.Controller`.
+5. Handle redirection after user signs in to obtain oAuth tokens (access, ID and refresh) by calling `getTokenResponse` function on `GoogleSignIn.Controller`.
 
     For iOS app, you can do it by implementing this function in your `UIApplicationDelegate`:
   
     ```swift
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
-        controller.getAccessToken(using: url) { result in
-            if case let .success(token) = result {
-                print("ACCESS TOKEN: \(token)")
+        controller.getTokenResponse(using: url) { result in
+            if case let .success(response) = result {
+                print("ACCESS TOKEN: \(response.accessToken)")
             }
         }
         return true
@@ -92,9 +92,9 @@ GoogleSignIn-Swift is compatible with [Swift Package Manager](https://swift.org/
     ```swift
     func scene(_ scene: UIScene, openURLContexts contexts: Set<UIOpenURLContext>) {
         guard let redirectUrl = contexts.first?.url else { return }
-        controller.getAccessToken(using: redirectUrl) { result in
-            if case let .success(token) = result {
-                print("ACCESS TOKEN: \(token)")
+        controller.getTokenResponse(using: redirectUrl) { result in
+            if case let .success(response) = result {
+                print("ACCESS TOKEN: \(response.accessToken)")
             }
         }
     }
